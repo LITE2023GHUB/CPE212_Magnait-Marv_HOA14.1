@@ -1,1 +1,94 @@
-1
+---
+- name: Install Keystone (Identity Service) on Controller
+  hosts: controller
+  become: true
+  tasks:
+    - name: Install Keystone packages
+      yum:
+        name:
+          - openstack-keystone
+          - httpd
+          - mod_wsgi
+        state: present
+
+    - name: Configure Keystone database
+      shell: |
+        mysql -u root -p"{{ mysql_root_password }}" -e "
+        CREATE DATABASE keystone;
+        GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'localhost' IDENTIFIED BY '{{ keystone_db_password }}';
+        GRANT ALL PRIVILEGES ON keystone.* TO 'keystone'@'%' IDENTIFIED BY '{{ keystone_db_password }}';
+        FLUSH PRIVILEGES;"
+
+    - name: Populate the Keystone database
+      shell: |
+        keystone-manage db_sync
+
+    - name: Initialize Fernet keys for Keystone
+      shell: |
+        keystone-manage fernet_setup --keystone-user keystone --keystone-group keystone
+        keystone-manage credential_setup --keystone-user keystone --keystone-group keystone
+
+    - name: Bootstrap Keystone
+      shell: |
+        keystone-manage bootstrap --bootstrap-password {{ keystone_admin_password }} \
+          --bootstrap-admin-url http://{{ controller_ip }}:5000/v3/ \
+          --bootstrap-internal-url http://{{ controller_ip }}:5000/v3/ \
+          --bootstrap-public-url http://{{ controller_ip }}:5000/v3/ \
+          --bootstrap-region-id RegionOne
+
+- name: Install Glance (Image Service) on Controller
+  hosts: controller
+  become: true
+  tasks:
+    - name: Install Glance packages
+      yum:
+        name:
+          - openstack-glance
+        state: present
+
+    - name: Configure Glance database
+      shell: |
+        mysql -u root -p"{{ mysql_root_password }}" -e "
+        CREATE DATABASE glance;
+        GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'localhost' IDENTIFIED BY '{{ glance_db_password }}';
+        GRANT ALL PRIVILEGES ON glance.* TO 'glance'@'%' IDENTIFIED BY '{{ glance_db_password }}';
+        FLUSH PRIVILEGES;"
+
+    - name: Populate the Glance database
+      shell: |
+        glance-manage db_sync
+
+    - name: Start and enable Glance services
+      systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop:
+        - openstack-glance-api
+
+- name: Install Nova (Compute Service)
+  hosts: compute
+  become: true
+  tasks:
+    - name: Install Nova Compute packages
+      yum:
+        name:
+          - openstack-nova-compute
+        state: present
+
+    - name: Configure Nova Compute
+      lineinfile:
+        path: /etc/nova/nova.conf
+        regexp: "^{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - { regexp: "^my_ip", line: "my_ip = {{ ansible_host }}" }
+        - { regexp: "^auth_strategy", line: "auth_strategy = keystone" }
+
+    - name: Start and enable Nova Compute service
+      systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop:
+        - openstack-nova-compute
