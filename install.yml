@@ -99,3 +99,8 @@
         name: nova-compute
         state: started
         enabled: true
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> d4651c90bb142866e8e39e0bf053b07e0fdff246
