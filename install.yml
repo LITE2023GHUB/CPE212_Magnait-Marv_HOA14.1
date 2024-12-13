@@ -1,14 +1,18 @@
 ---
-- name: Install Keystone (Identity Service) on Controller
+- name: Install Keystone (Identity Service) on Controller (Ubuntu)
   hosts: controller
   become: true
   tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
     - name: Install Keystone packages
-      yum:
+      apt:
         name:
-          - openstack-keystone
-          - httpd
-          - mod_wsgi
+          - keystone
+          - apache2
+          - libapache2-mod-wsgi
         state: present
 
     - name: Configure Keystone database
@@ -36,14 +40,14 @@
           --bootstrap-public-url http://{{ controller_ip }}:5000/v3/ \
           --bootstrap-region-id RegionOne
 
-- name: Install Glance (Image Service) on Controller
+- name: Install Glance (Image Service) on Controller (Ubuntu)
   hosts: controller
   become: true
   tasks:
     - name: Install Glance packages
-      yum:
+      apt:
         name:
-          - openstack-glance
+          - glance
         state: present
 
     - name: Configure Glance database
@@ -64,9 +68,10 @@
         state: started
         enabled: true
       loop:
-        - openstack-glance-api
+        - glance-api
+        - glance-registry
 
-- name: Install Nova (Compute Service)
+- name: Install Nova (Compute Service) on Compute Node (CentOS)
   hosts: compute
   become: true
   tasks:
@@ -87,8 +92,6 @@
 
     - name: Start and enable Nova Compute service
       systemd:
-        name: "{{ item }}"
+        name: openstack-nova-compute
         state: started
         enabled: true
-      loop:
-        - openstack-nova-compute
