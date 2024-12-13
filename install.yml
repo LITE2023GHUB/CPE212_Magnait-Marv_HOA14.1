@@ -71,14 +71,18 @@
         - glance-api
         - glance-registry
 
-- name: Install Nova (Compute Service) on Compute Node (CentOS)
+- name: Install Nova (Compute Service) on Compute Node (Ubuntu)
   hosts: compute
   become: true
   tasks:
+    - name: Update the apt package index
+      apt:
+        update_cache: yes
+
     - name: Install Nova Compute packages
-      dnf:
+      apt:
         name:
-          - openstack-nova-compute
+          - nova-compute
         state: present
 
     - name: Configure Nova Compute
@@ -92,9 +96,8 @@
 
     - name: Start and enable Nova Compute service
       systemd:
-        name: openstack-nova-compute
+        name: nova-compute
         state: started
         enabled: true
 
-fatal: [192.168.56.105]: FAILED! => {"changed": false, "module_stderr": "Shared connection to 192.168.56.105 closed.\r\n", "module_stdout": "\r\nErrors during downloading metadata for repository 'baseos':\r\n  - Status code: 404 for https://mirrors.centos.org/metalink?repo=centos-baseos-$stream&arch=x86_64&protocol=https,http (IP: 54.180.100.16)\r\n  - Status code: 404 for https://mirrors.centos.org/metalink?repo=centos-baseos-$stream&arch=x86_64&protocol=https,http (IP: 18.136.235.60)\r\nTraceback (most recent call last):\r\n  File \"/usr/lib/python3.9/site-packages/dnf/repo.py\", line 574, in load\r\n    ret = self._repo.load()\r\n  File \"/usr/lib64/python3.9/site-packages/libdnf/repo.py\", line 331, in load\r\n    return _repo.Repo_load(self)\r\nlibdnf._error.Error: Failed to download metadata for repo 'baseos': Cannot prepare internal mirrorlist: Status code: 404 for https://mirrors.centos.org/metalink?repo=centos-baseos-$stream&arch=x86_64&protocol=https,http (IP: 18.136.235.60)\r\n\r\nDuring handling of the above exception, another exception occurred:\r\n\r\nTraceback (most recent call last):\r\n  File \"/tmp/ansible_17vij4tq/ansible_module_dnf.py\", line 534, in <module>\r\n    main()\r\n  File \"/tmp/ansible_17vij4tq/ansible_module_dnf.py\", line 526, in main\r\n    base = _base(\r\n  File \"/tmp/ansible_17vij4tq/ansible_module_dnf.py\", line 251, in _base\r\n    base.fill_sack(load_system_repo='auto')\r\n  File \"/usr/lib/python3.9/site-packages/dnf/base.py\", line 406, in fill_sack\r\n    self._add_repo_to_sack(r)\r\n  File \"/usr/lib/python3.9/site-packages/dnf/base.py\", line 141, in _add_repo_to_sack\r\n    repo.load()\r\n  File \"/usr/lib/python3.9/site-packages/dnf/repo.py\", line 581, in load\r\n    raise dnf.exceptions.RepoError(str(e))\r\ndnf.exceptions.RepoError: Failed to download metadata for repo 'baseos': Cannot prepare internal mirrorlist: Status code: 404 for https://mirrors.centos.org/metalink?repo=centos-baseos-$stream&arch=x86_64&protocol=https,http (IP: 18.136.235.60)\r\n", "msg": "MODULE FAILURE", "rc": 1}
 
